@@ -1,94 +1,204 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Player Streamer</title>
-    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #121212;
-            color: white;
-            text-align: center;
-            padding: 20px;
-        }
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-            background: #1e1e1e;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-        button {
-            background: #00adb5;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 15px;
-            font-weight: bold;
-        }
-        button:hover { background: #007c82; }
-        .status { margin: 15px 0; font-weight: bold; color: #ffde7d; }
-        .peer-id { background: #333; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 18px; color: #00adb5; }
-        video { width: 100%; max-width: 200px; border-radius: 5px; margin-top: 10px; border: 2px solid #333; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register Stream Session</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000000;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    overflow: hidden;
+  }
+
+  /* Fullscreen container that overrules all background layers */
+  .overrule-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, #111 0%, #000 100%);
+    z-index: 99999; /* Absolute highest hierarchy position */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    padding: 20px;
+  }
+
+  .form-container {
+    width: 100%;
+    max-width: 800px; /* Optimal reading line length for stretched inputs */
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+  }
+
+  .title-plate {
+    text-align: center;
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(255,255,255,0.2);
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .input-group label {
+    color: #90EE90;
+    font-size: 14px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    padding-left: 5px;
+  }
+
+  /* Full stretch design from left to right bounds */
+  .input-group input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 18px 20px;
+    font-size: 18px;
+    background: #0d0d0d;
+    border: 2px solid #222;
+    border-radius: 8px;
+    color: #ffffff;
+    outline: none;
+    transition: all 0.3s ease;
+  }
+
+  .input-group input:focus {
+    border-color: #90EE90;
+    background: #141414;
+    box-shadow: 0 0 15px rgba(144, 238, 144, 0.2);
+  }
+
+  #submit-gate-btn {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 20px;
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background-color: #ff3333;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 15px;
+    box-shadow: 0 4px 20px rgba(255, 51, 51, 0.3);
+    transition: all 0.2s ease;
+  }
+
+  #submit-gate-btn:hover {
+    background-color: #e60000;
+    box-shadow: 0 4px 25px rgba(255, 51, 51, 0.5);
+    transform: translateY(-1px);
+  }
+
+  #submit-gate-btn:active {
+    transform: translateY(1px);
+  }
+</style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Player Dashboard</h2>
-    <p>Give this ID to your Admin:</p>
-    <div class="peer-id" id="my-id">Generating ID...</div>
-    <div class="status" id="status">Click below to start streams...</div>
-    <button id="start-btn">Start Streaming Screen & Selfie</button>
+<div class="overrule-overlay">
+  <div class="form-container">
     
-    <h3>Local Preview (Selfie)</h3>
-    <video id="local-selfie" autoplay playsinline muted></video>
+    <div class="title-plate">Initialize Streaming Access</div>
+
+    <div class="input-group">
+      <label for="userName">First Name</label>
+      <input type="text" id="userName" placeholder="Enter your first name" autocomplete="off" required>
+    </div>
+
+    <div class="input-group">
+      <label for="userSurname">Surname</label>
+      <input type="text" id="userSurname" placeholder="Enter your surname" autocomplete="off" required>
+    </div>
+
+    <button id="submit-gate-btn">SUBMIT & OPEN STREAM</button>
+
+  </div>
 </div>
 
-<script>
-    // Create a random Peer ID for the player
-    const peer = new Peer();
-    let selfieStream, screenStream;
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-    peer.on('open', (id) => {
-        document.getElementById('my-id').innerText = id;
-        document.getElementById('status').innerText = "Ready. Share your ID with the admin.";
-    });
+  // Completely aligned project configuration context block
+  const firebaseConfig = {
+    apiKey: "AIzaSyCcCjs7M6vFbJzLvYvZfddmEIsCzPPG3jE",
+    authDomain: "quizer-project.firebaseapp.com",
+    databaseURL: "https://quizer-project-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "quizer-project",
+    storageBucket: "quizer-project.firebasestorage.app",
+    messagingSenderId: "401652926555",
+    appId: "1:401652926555:web:09e9b859638facefcd577e",
+    measurementId: "G-D1D4LK2XRT"
+  };
 
-    document.getElementById('start-btn').addEventListener('click', async () => {
-        document.getElementById('status').innerText = "Requesting permissions...";
-        
-        try {
-            // 1. Get Selfie Camera
-            selfieStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            document.getElementById('local-selfie').srcObject = selfieStream;
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  let activeUid = null;
 
-            // 2. Get Screen Capture
-            screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+  // Intercept and maintain state synchronization
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      activeUid = user.uid;
+    } else {
+      // Force return fallback if security profile is vacant
+      location.href = "login.html";
+    }
+  });
 
-            document.getElementById('status').innerText = "Streams active! Waiting for Admin to connect...";
+  document.getElementById('submit-gate-btn').onclick = async function() {
+    const nameVal = document.getElementById('userName').value.trim();
+    const surnameVal = document.getElementById('userSurname').value.trim();
 
-            // Listen for the admin's connection request
-            peer.on('call', (call) => {
-                // Check metadata sent by admin to see which stream they want
-                if (call.metadata && call.metadata.type === 'screen') {
-                    call.answer(screenStream);
-                } else {
-                    call.answer(selfieStream);
-                }
-            });
+    if (!nameVal || !surnameVal) {
+      alert("Please populate both properties completely to proceed.");
+      return;
+    }
 
-        } catch (err) {
-            console.error(err);
-            document.getElementById('status').innerText = "Error getting media. Ensure camera and screen permissions are granted.";
-        }
-    });
+    if (!activeUid) {
+      alert("Authentication payload missing. Try signing in again.");
+      return;
+    }
+
+    try {
+      // Write profile updates down to core relational paths
+      await set(ref(db, "users/" + activeUid), {
+        name: nameVal,
+        surname: surnameVal,
+        lastUpdated: Date.now()
+      });
+
+      // Break execution out into next view asset smoothly
+      location.href = "stream.html";
+
+    } catch (err) {
+      console.error("Failed to commit database sequence: ", err);
+      alert("Transaction processing failed. Verification needed.");
+    }
+  };
 </script>
 </body>
 </html>
