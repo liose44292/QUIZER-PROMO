@@ -1,0 +1,476 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>Quizer Game</title>  
+<style>  
+  body {   
+    margin: 0;   
+    font-family: Arial, sans-serif;   
+    background-color: #87CEEB;   
+    color: #333;   
+    height: 100vh;   
+    display: flex;   
+    flex-direction: column;   
+  }  
+  header {   
+    display: flex;   
+    justify-content: space-between;   
+    padding: 15px;   
+    font-weight: bold;   
+    font-size: 20px;   
+    background: rgba(255,255,255,0.2);   
+  }  
+  #game-zone {   
+    flex: 1;   
+    display: flex;   
+    flex-direction: column;   
+    justify-content: center;   
+    align-items: center;   
+    padding: 20px;   
+    position: relative;   
+  }  
+  #start-btn {   
+    font-size: 80px;   
+    cursor: pointer;   
+    background: none;   
+    border: none;   
+    color: #004d00;   
+  }  
+  #display-box {   
+    width: 100%;   
+    max-width: 500px;   
+    height: 300px;   
+    background: #000;   
+    border-radius: 8px;   
+    display: none;   
+    justify-content: center;   
+    align-items: center;   
+    overflow: hidden;   
+    position: relative;   
+  }  
+  #display-box img, #display-box video {   
+    width: 100%;   
+    height: 100%;   
+    object-fit: contain;   
+  }  
+  #audio-icon {   
+    font-size: 80px;   
+    color: white;   
+  }  
+  #question-text {   
+    font-size: 22px;   
+    font-weight: bold;   
+    margin-bottom: 15px;   
+    text-align: center;   
+    min-height: 30px;   
+  }  
+  #answer-input {   
+    padding: 12px;   
+    width: 80%;   
+    max-width: 400px;   
+    border-radius: 4px;   
+    border: 2px solid #333;   
+    font-size: 16px;   
+    margin-top: 15px;   
+    text-align: center;   
+    display: none;   
+    box-sizing: border-box;  
+  }  
+  #submit-ans-btn {  
+    display: none;  
+    margin-top: 15px;  
+    width: 80%;  
+    max-width: 400px;  
+    padding: 12px;  
+    background-color: #228B22; /* Forest Green */  
+    color: white;  
+    font-size: 18px;  
+    font-weight: bold;  
+    border: none;  
+    border-radius: 4px;  
+    cursor: pointer;  
+    text-align: center;  
+  }  
+  #replay-btn {   
+    position: absolute;   
+    bottom: 10px;   
+    right: 10px;   
+    background: red;   
+    color: white;   
+    border: none;   
+    padding: 5px 10px;   
+    font-weight: bold;   
+    cursor: pointer;   
+    display: none;   
+    border-radius: 4px;   
+    z-index: 10;   
+  }  
+  
+  /* POPUP CONTAINER MODAL */
+  .game-popup {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  .popup-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    max-width: 320px;
+    width: 90%;
+    box-sizing: border-box;
+  }
+  .popup-content h2 { margin-top: 0; color: #cc0000; }
+  .popup-content button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .btn-continue { background-color: #228B22; color: white; }
+  .btn-exit { background-color: #d9534f; color: white; }
+
+  /* 🔥 GREEN CORRECT ANSWER POPUP STYLE */
+  #correctAnswerPopup .popup-content {
+    border: 4px solid #228B22;
+  }
+  #correctAnswerPopup h2 {
+    color: #228B22;
+  }
+  .revealed-answer {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    margin: 15px 0;
+    padding: 10px;
+    background: #e6f7e6;
+    border-radius: 6px;
+    border: 1px dashed #228B22;
+  }
+</style>
+
+</head>  
+<body>  <header>  
+  <div>Score: <span id="score">0</span></div>  
+  <div>Timer: <span id="timer">30</span></div>  
+  <div id="lives-display">Lives: </div>  
+</header>  <div id="game-zone">  
+  <button id="start-btn">▶</button>     <div id="question-text"></div>  
+  <div id="display-box">  
+    <button id="replay-btn">replay</button>  
+    <img id="game-img" style="display:none;" alt="Quiz Element">  
+    <video id="game-video" style="display:none;"></video>  
+    <div id="audio-icon" style="display:none;">🔊</div>  
+  </div>  
+  <input type="text" id="answer-input" placeholder="Type your answer here...">  
+  <button id="submit-ans-btn">SUBMIT</button>  
+</div>  
+
+<div class="game-popup" id="correctAnswerPopup">  
+  <div class="popup-content">  
+    <h2>💡 CORRECT ANSWER</h2>  
+    <p>The right answer was:</p>
+    <div class="revealed-answer" id="revealedAnswerText">---</div>  
+    <button class="btn-continue" id="correctPopNextBtn">NEXT</button>  
+  </div>  
+</div>  
+
+<div class="game-popup" id="lifePopup">  
+  <div class="popup-content">  
+    <h2>❌ YOU DIED</h2>  
+    <p id="life-popup-msg">You lost a life! Would you like to continue?</p>  
+    <button class="btn-continue" id="popContinueBtn">CONTINUE</button>  
+    <button class="btn-exit" id="popExitBtn">EXIT</button>  
+  </div>  
+</div>  
+
+<div class="game-popup" id="gameOverPopup">  
+  <div class="popup-content">  
+    <h2 style="color: #004d00;">🎉 GAME OVER</h2>  
+    <p style="font-size: 18px; font-weight: bold;">Final Score: <span id="finalScoreLabel">0</span></p>  
+    <button class="btn-exit" onclick="location.href='muustandigamin.html'">OK</button>  
+  </div>  
+</div>  
+
+<script type="module">  
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";  
+  import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";  
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";  
+  
+  const firebaseConfig = {
+    apiKey: "AIzaSyCcCjs7M6vFbJzLvYvZfddmEIsCzPPG3jE",
+    authDomain: "quizer-project.firebaseapp.com",
+    databaseURL: "https://quizer-project-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "quizer-project",
+    storageBucket: "quizer-project.firebasestorage.app",
+    messagingSenderId: "401652926555",
+    appId: "1:401652926555:web:09e9b859638facefcd577e",
+    measurementId: "G-D1D4LK2XRT"
+  };  
+  
+  const app = initializeApp(firebaseConfig);  
+  const db = getDatabase(app);  
+  const auth = getAuth(app);  
+  
+  let uid, lives, score = 0, timerInterval = null, countdown = 30;  
+  let pool = [], currentItem = null, currentQuestionIdx = -1;  
+  let activeAudio = null;  
+  
+  onAuthStateChanged(auth, async (user) => {  
+    if(!user) { location.href = "login.html"; return; }  
+    uid = user.uid;  
+    
+    // ✅ READ SELECTED LIVES LOCALLY ONLY
+    lives = parseInt(localStorage.getItem("selectedLives")) || 0;  
+    updateLivesDisplay();  
+    
+    if(lives <= 0) { 
+      alert("No lives chosen!"); 
+      location.href = "quizerlifeselector.html"; 
+    }  
+  });  
+  
+  document.getElementById('start-btn').onclick = async function() {  
+    this.style.display = 'none';  
+    updateLivesDisplay();  
+      
+    document.getElementById('display-box').style.display = 'flex';  
+    document.getElementById('answer-input').style.display = 'block';  
+    document.getElementById('submit-ans-btn').style.display = 'block';  
+      
+    await loadMediaPool();  
+    nextRound();  
+  };  
+  
+  async function loadMediaPool() {  
+    const types = ['audio', 'video', 'image'];  
+    pool = [];  
+    for(let t of types){  
+      let snap = await get(ref(db, "quizMedia/" + t));  
+      let val = snap.val() || {};  
+      for(let key in val){  
+        pool.push({id: key, ...val[key]});  
+      }  
+    }  
+  }  
+  
+  async function nextRound() {  
+    clearInterval(timerInterval);  
+    if(activeAudio) { activeAudio.pause(); activeAudio = null; }  
+      
+    document.getElementById('game-img').style.display = 'none';  
+    document.getElementById('game-video').style.display = 'none';  
+    document.getElementById('audio-icon').style.display = 'none';  
+    document.getElementById('replay-btn').style.display = 'none';  
+    document.getElementById('answer-input').value = '';  
+  
+    if(lives <= 0) { showEndGameModal(); return; }  
+    if(pool.length === 0) { alert("No challenges loaded inside Firebase database paths!"); return; }  
+  
+    currentItem = null;  
+    currentQuestionIdx = -1;  
+  
+    let roll = Math.random() * 100;  
+    let preferredType = 'image';   
+    if(roll < 35) preferredType = 'audio';       
+    else if(roll < 70) preferredType = 'video';  
+  
+    let typedPool = pool.filter(i => i.type === preferredType);  
+    if(typedPool.length === 0) typedPool = pool;   
+      
+    typedPool.sort(() => Math.random() - 0.5);  
+  
+    for(let item of typedPool){  
+      let historySnap = await get(ref(db, `history/${uid}/${item.id}`));  
+      let history = historySnap.val() || {};  
+        
+      for(let i = 0; i < 10; i++){  
+        if(item.questions && item.questions[i] !== undefined && item.questions[i] !== "" && !history[i]){  
+          currentItem = item;  
+          currentQuestionIdx = i;  
+          break;  
+        }  
+      }  
+      if(currentItem) break;  
+    }  
+  
+    if(!currentItem) {  
+      for(let item of pool){  
+        let historySnap = await get(ref(db, `history/${uid}/${item.id}`));  
+        let history = historySnap.val() || {};  
+        for(let i = 0; i < 10; i++){  
+          if(item.questions && item.questions[i] !== undefined && item.questions[i] !== "" && !history[i]){            currentItem = item;  
+            currentQuestionIdx = i;  
+            break;  
+          }  
+        }  
+        if(currentItem) break;  
+      }  
+    }  
+  
+    if(!currentItem) {  
+      alert("Incredible! You have answered every single question in the database.");  
+      showEndGameModal();  
+      return;  
+    }  
+  
+    document.getElementById('question-text').innerText = currentItem.questions[currentQuestionIdx];  
+      
+    if(currentItem.type === 'image'){  
+      const img = document.getElementById('game-img');  
+      img.src = currentItem.data;  
+      img.style.display = 'block';  
+    } else if(currentItem.type === 'video'){  
+      const vid = document.getElementById('game-video');  
+      vid.src = currentItem.data;  
+      vid.style.display = 'block';  
+      vid.play().catch(e => console.log("Autoplay caught, user interaction needed."));  
+      document.getElementById('replay-btn').style.display = 'block';  
+    } else if(currentItem.type === 'audio'){  
+      document.getElementById('audio-icon').style.display = 'block';  
+      activeAudio = new Audio(currentItem.data);  
+      activeAudio.play().catch(e => console.log("Autoplay caught, user interaction needed."));  
+      document.getElementById('replay-btn').style.display = 'block';  
+    }  
+  
+    startTimer();  
+  }  
+  
+  function startTimer() {  
+    clearInterval(timerInterval);  
+    countdown = 30;  
+    document.getElementById('timer').innerText = countdown;  
+      
+    timerInterval = setInterval(() => {  
+      countdown--;  
+      document.getElementById('timer').innerText = countdown;  
+      if(countdown <= 0) {  
+        clearInterval(timerInterval);  
+        handleWrongAnswer();  
+      }  
+    }, 1000);  
+  }  
+  
+  document.getElementById('replay-btn').onclick = function() {  
+    if(countdown <= 0) return;  
+    if(currentItem.type === 'video') {  
+      const vid = document.getElementById('game-video');  
+      vid.currentTime = 0;  
+      vid.play();  
+    } else if(currentItem.type === 'audio' && activeAudio) {  
+      activeAudio.currentTime = 0;  
+      activeAudio.play();  
+    }  
+  };  
+  
+  document.getElementById('submit-ans-btn').onclick = function() {  
+    validateUserResponse();  
+  };  
+  
+  // Clean special characters, symbols, and whitespace strings completely
+  function normalizeText(str) {
+    if (!str) return "";
+    return str.toString()
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, "") // Removes spaces, hyphens, slashes, punctuation symbols completely
+              .trim();
+  }
+
+  async function validateUserResponse() {  
+    if(!currentItem || currentQuestionIdx === -1) return;  
+      
+    let userAnsRaw = document.getElementById('answer-input').value;  
+    let correctAnsRaw = currentItem.answers[currentQuestionIdx];  
+  
+    // Normalize both tokens for robust structural evaluation
+    if(normalizeText(userAnsRaw) === normalizeText(correctAnsRaw)) {  
+      clearInterval(timerInterval);  
+      score += countdown;   
+      document.getElementById('score').innerText = score;  
+        
+      await set(ref(db, `history/${uid}/${currentItem.id}/${currentQuestionIdx}`), true);  
+        
+      nextRound();  
+    } else {  
+      clearInterval(timerInterval);  
+      handleWrongAnswer();  
+    }  
+  }  
+  
+  async function handleWrongAnswer() {  
+    // ✅ ONLY MINUS LOCALLY - NO WALLET WRITE STREAMS REACHED HERE
+    lives--;  
+    updateLivesDisplay();  
+    
+    if(activeAudio) activeAudio.pause();  
+
+    let correctAns = currentItem.answers[currentQuestionIdx].toString().trim();
+    document.getElementById('revealedAnswerText').innerText = correctAns;
+    document.getElementById('correctAnswerPopup').style.display = 'flex';
+  }  
+  
+  document.getElementById('correctPopNextBtn').onclick = function() {  
+    document.getElementById('correctAnswerPopup').style.display = 'none';  
+    
+    if(lives <= 0) {  
+      showEndGameModal();  
+    } else {  
+      document.getElementById('lifePopup').style.display = 'flex';  
+    }  
+  };
+
+  document.getElementById('popContinueBtn').onclick = function() {  
+    document.getElementById('lifePopup').style.display = 'none';  
+    nextRound();  
+  };  
+  
+  document.getElementById('popExitBtn').onclick = function() {  
+    location.href = "muustandigamin.html";  
+  };  
+  
+  function updateLivesDisplay() {  
+    let out = '';  
+    for(let i=0; i<lives; i++) out += '❤️ ';  
+    document.getElementById('lives-display').innerText = "Lives: " + (out || "None");  
+  }  
+  
+  async function showEndGameModal() {  
+    clearInterval(timerInterval);  
+    if(activeAudio) activeAudio.pause();  
+    document.getElementById('lifePopup').style.display = 'none';  
+    document.getElementById('correctAnswerPopup').style.display = 'none'; 
+    document.getElementById('finalScoreLabel').innerText = score;  
+    document.getElementById('gameOverPopup').style.display = 'flex';  
+  
+    if (uid) {  
+      const userProfileSnap = await get(ref(db, "users/" + uid));  
+      const userProfile = userProfileSnap.val();  
+      const realName = userProfile?.name   
+        ? userProfile.name + " " + (userProfile.surname || "")  
+        : "Player";  
+  
+      const currentSnap = await get(ref(db, "leaderboard/quizer/" + uid));  
+      const currentData = currentSnap.val();  
+  
+      if(!currentData || score > (currentData.score || 0)) {  
+        await set(ref(db, "leaderboard/quizer/" + uid), {  
+          name: realName,  
+          score: score,  
+          timestamp: Date.now()  
+        });  
+      }  
+    }  
+  }  
+</script> </body>  
+</html>
