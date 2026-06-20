@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Streamer</title>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #121212;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        button {
+            background: #00adb5;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        button:hover { background: #007c82; }
+        .status { margin: 15px 0; font-weight: bold; color: #ffde7d; }
+        .peer-id { background: #333; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 18px; color: #00adb5; }
+        video { width: 100%; max-width: 200px; border-radius: 5px; margin-top: 10px; border: 2px solid #333; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Player Dashboard</h2>
+    <p>Give this ID to your Admin:</p>
+    <div class="peer-id" id="my-id">Generating ID...</div>
+    <div class="status" id="status">Click below to start streams...</div>
+    <button id="start-btn">Start Streaming Screen & Selfie</button>
+    
+    <h3>Local Preview (Selfie)</h3>
+    <video id="local-selfie" autoplay playsinline muted></video>
+</div>
+
+<script>
+    // Create a random Peer ID for the player
+    const peer = new Peer();
+    let selfieStream, screenStream;
+
+    peer.on('open', (id) => {
+        document.getElementById('my-id').innerText = id;
+        document.getElementById('status').innerText = "Ready. Share your ID with the admin.";
+    });
+
+    document.getElementById('start-btn').addEventListener('click', async () => {
+        document.getElementById('status').innerText = "Requesting permissions...";
+        
+        try {
+            // 1. Get Selfie Camera
+            selfieStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById('local-selfie').srcObject = selfieStream;
+
+            // 2. Get Screen Capture
+            screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+
+            document.getElementById('status').innerText = "Streams active! Waiting for Admin to connect...";
+
+            // Listen for the admin's connection request
+            peer.on('call', (call) => {
+                // Check metadata sent by admin to see which stream they want
+                if (call.metadata && call.metadata.type === 'screen') {
+                    call.answer(screenStream);
+                } else {
+                    call.answer(selfieStream);
+                }
+            });
+
+        } catch (err) {
+            console.error(err);
+            document.getElementById('status').innerText = "Error getting media. Ensure camera and screen permissions are granted.";
+        }
+    });
+</script>
+</body>
+</html>
