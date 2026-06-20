@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quizer Leaderboard</title>
+
+<style>
+body {
+  margin: 0;
+  background: radial-gradient(circle at center, #1a0000 0%, #000000 100%);
+  color: #ffffff;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  text-align: center;
+  min-height: 100vh;
+}
+
+#date {
+  font-size: 24px;
+  margin-top: 15px;
+  color: #ff3333;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+#timer {
+  font-size: 48px;
+  margin: 10px 0 20px 0;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+}
+
+#status-msg {
+  font-size: 42px;
+  margin: 15px 0 25px 0;
+  font-weight: 900;
+  color: #ff0000;
+  letter-spacing: 2px;
+  text-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+  animation: pulse 1.5s infinite alternate;
+  display: none;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.98); opacity: 0.8; }
+  100% { transform: scale(1.02); opacity: 1; }
+}
+
+#content {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.card {
+  background: linear-gradient(135deg, #1f0505 0%, #0d0000 100%);
+  padding: 20px;
+  border-radius: 12px;
+  font-size: 22px;
+  border: 1px solid #400000;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  transition: transform 0.2s;
+  position: relative;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: transparent;
+  border-radius: 0 0 12px 12px;
+}
+
+.card.line-drawn::after {
+  background: #ff0000 !important;
+  box-shadow: 0 0 8px #ff0000;
+}
+
+.gold { border-color: #ffd700; }
+.gold b { color: #ffd700; text-shadow: 0 0 5px rgba(255,215,0,0.3); }
+.silver { border-color: #c0c0c0; }
+.silver b { color: #c0c0c0; text-shadow: 0 0 5px rgba(192,192,192,0.3); }
+.bronze { border-color: #cd7f32; }
+.bronze b { color: #cd7f32; text-shadow: 0 0 5px rgba(205,127,50,0.3); }
+.normal { border-color: #331010; }
+.normal b { color: #ffcccc; }
+
+#popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #ff0000;
+  color: white;
+  padding: 40px 60px;
+  font-size: 40px;
+  font-weight: bold;
+  display: none;
+  border-radius: 15px;
+  box-shadow: 0 0 30px rgba(255,0,0,0.8);
+  z-index: 10000;
+}
+
+#rank {
+  position: fixed;
+  bottom: 15px;
+  left: 15px;
+  font-size: 22px;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 8px 15px;
+  border-radius: 5px;
+  border: 1px solid #ff3333;
+}
+</style>
+</head>
+
+<body>
+
+<div id="date"></div>
+<div id="timer"></div>
+<div id="status-msg">GAME WILL START SOON</div>
+
+<div id="content"></div>
+<div id="rank">RANK: N/A</div>
+<div id="popup">RESET!</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCcCjs7M6vFbJzLvYvZfddmEIsCzPPG3jE",
+  authDomain: "quizer-project.firebaseapp.com",
+  databaseURL: "https://quizer-project-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "quizer-project",
+  storageBucket: "quizer-project.firebasestorage.app",
+  messagingSenderId: "401652926555",
+  appId: "1:401652926555:web:09e9b859638facefcd577e",
+  measurementId: "G-D1D4LK2XRT"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+
+let currentUser = null;
+let isFrozen = false;
+
+onAuthStateChanged(auth, (u) => {
+  if(!u) location.href = "index.html";
+  currentUser = u;
+});
+
+function updateTimeAndSchedule() {
+  let now = new Date();
+  document.getElementById("date").innerText = now.toLocaleDateString() + " " + now.toLocaleTimeString();
+
+  let hrs = now.getHours();
+  let timerEl = document.getElementById("timer");
+  let statusEl = document.getElementById("status-msg");
+
+  if (hrs >= 7 && hrs < 13) {
+    isFrozen = false;
+    statusEl.style.display = "none";
+    timerEl.style.display = "block";
+    let target = new Date(now).setHours(13, 0, 0, 0);
+    let diff = target - now;
+    let h = Math.floor(diff / 1000 / 60 / 60);
+    let m = Math.floor((diff / 1000 / 60) % 60);
+    timerEl.innerText = `${h}H:${m}M LEFT`;
+  } 
+  else if (hrs >= 13 && hrs < 14) {
+    isFrozen = true;
+    timerEl.style.display = "none";
+    statusEl.style.display = "block";
+  } 
+  else if (hrs >= 14 && hrs < 20) {
+    isFrozen = false;
+    statusEl.style.display = "none";
+    timerEl.style.display = "block";
+    let target = new Date(now).setHours(20, 0, 0, 0);
+    let diff = target - now;
+    let h = Math.floor(diff / 1000 / 60 / 60);
+    let m = Math.floor((diff / 1000 / 60) % 60);
+    timerEl.innerText = `${h}H:${m}M LEFT`;
+  } 
+  else {
+    isFrozen = true;
+    timerEl.style.display = "none";
+    statusEl.style.display = "block";
+  }
+}
+setInterval(updateTimeAndSchedule, 1000);
+updateTimeAndSchedule();
+
+// Listen for admin driven layout strikes - separated path
+onValue(ref(db, "leaderboard/quizerAdminLineDrawn"), (snap) => {
+  const lineDrawn = snap.val() || false;
+  document.querySelectorAll('.card').forEach(card => {
+    if (lineDrawn) card.classList.add('line-drawn');
+    else card.classList.remove('line-drawn');
+  });
+});
+
+const content = document.getElementById("content");
+const rankEl = document.getElementById("rank");
+
+// ISOLATED PATH: leaderboard/quizer
+onValue(ref(db, "leaderboard/quizer"), snap => {
+  const data = snap.val() || {};
+  let arr = [];
+
+  for (let uid in data) {
+    arr.push({
+      uid,
+      name: data[uid].name || "Player",
+      score: data[uid].score,
+      time: data[uid].timestamp
+    });
+  }
+
+  arr.sort((a, b) => b.score - a.score);
+  content.innerHTML = "";
+
+  arr.slice(0, 75).forEach((p, i) => {
+    let cls = "normal";
+    if (i === 0) cls = "gold";
+    if (i === 1) cls = "silver";
+    if (i === 2) cls = "bronze";
+
+    let date = new Date(p.time).toLocaleString();
+    let div = document.createElement("div");
+    div.className = "card " + cls;
+    div.innerHTML = `<b>${i + 1}. ${p.name}</b><br>Score: ${p.score}<br><small>${date}</small>`;
+    content.appendChild(div);
+
+    if (currentUser && currentUser.uid === p.uid) {
+      rankEl.innerText = "RANK: " + (i + 1);
+    }
+  });
+
+  if (!arr.find(p => p.uid === currentUser?.uid)) {
+    rankEl.innerText = "RANK: N/A";
+  }
+});
+</script>
+</body>
+</html>
